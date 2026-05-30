@@ -1,40 +1,70 @@
 -- =================================================================
--- [SAFE & OPTIMIZED FOR DELTA EXECUTOR ANDROID]
+-- [OPTIMIZED & SECURE KICKBLOX SCRIPT FOR DELTA ANDROID]
 -- =================================================================
 local UIS, players = game:GetService("UserInputService"), game:GetService("Players")
 local player, workspace = players.LocalPlayer, game:GetService("Workspace")
 
--- 1. ตรวจสอบความปลอดภัยอุปกรณ์และการรัน
+-- 1. อุปกรณ์และการรันเช็ค
 if not (UIS.TouchEnabled and not UIS.KeyboardEnabled and ((identifyexecutor and string.find(string.lower(identifyexecutor()), "delta")) or _G.Delta_Executed or firetouchinterest)) then 
-    player:Kick("❌ สคริปต์นี้ปรับแต่งมาเพื่อ Android ผ่าน Delta เท่านั้น!")
+    player:Kick("❌ สคริปต์นี้ปลอดภัยและเสถียรเฉพาะบน Android ผ่าน Delta เท่านั้น!")
     return 
 end 
 
--- กำหนดค่าเริ่มต้นให้กับตัวแปรสากล
-_G.ScriptActive, _G.AutoKick, _G.AutoWeather, _G.CustomSpeed = true, false, false, 16 
+-- 2. เปลี่ยนระบบสถานะมาใช้ Local Configuration ป้องกันการแทรกแซงข้อมูล
+local Config = {
+    ScriptActive = true,
+    AutoKick = false,
+    AutoWeather = false,
+    CustomSpeed = 16
+}
 
--- ฟังก์ชันดึงข้อมูลตัวละคร (เพิ่มแคชเพื่อไม่ให้หน่วงระบบ)
+-- ระบบจัดการพาร์ทอัจฉริยะ (Cache) เพื่อลดภาระ CPU บนมือถือ
+local cachedKickPads = {}
+local cachedWeatherPads = {}
+
+local function updateTargetPadsCache()
+    table.clear(cachedKickPads)
+    table.clear(cachedWeatherPads)
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("TouchTransmitter") and obj.Parent then
+            local n = string.lower(obj.Parent.Name)
+            if string.find(n, "kick") or string.find(n, "pad") then
+                table.insert(cachedKickPads, obj.Parent)
+            elseif string.find(n, "weather") or string.find(n, "mutation") or string.find(n, "virus") then
+                table.insert(cachedWeatherPads, obj.Parent)
+            end
+        end
+    end
+end
+
+-- สแกนหาวัตถุรอบแรกทันที
+updateTargetPadsCache()
+
+-- สแกนซ้ำเบื้องหลังทุกๆ 15 วินาที เผื่อแมพมีการเกิดใหม่ของวัตถุ
+task.spawn(function()
+    while Config.ScriptActive do
+        task.wait(15)
+        updateTargetPadsCache()
+    end
+end)
+
 local function getChar()
     local c = player.Character or player.CharacterAdded:Wait()
     return c, c:WaitForChild("HumanoidRootPart", 5), c:WaitForChild("Humanoid", 5)
 end 
 
--- 2. ย้ายตำแหน่งติดตั้ง UI ให้ปลอดภัยขึ้นเพื่อเลี่ยงการสแกน CoreGui
+-- 3. ตรวจสอบความปลอดภัยในการเข้าถึง Layer อินเตอร์เฟส
 local SG = Instance.new("ScreenGui")
-local coreGuiSuccess = pcall(function()
-    SG.Parent = game:GetService("CoreGui")
-end)
-if not coreGuiSuccess then
-    SG.Parent = player:WaitForChild("PlayerGui")
-end
+local coreGuiSuccess = pcall(function() SG.Parent = game:GetService("CoreGui") end)
+if not coreGuiSuccess then SG.Parent = player:WaitForChild("PlayerGui") end
 
--- ฟังก์ชันช่วยกำหนด Properties
 local function setProps(obj, props)
     for k, v in pairs(props) do obj[k] = v end 
     return obj 
 end 
 
--- [สร้าง UI ตามแบบเดิมของคุณ]
+-- [ส่วนการสร้าง UI]
 local ToggleBtn = setProps(Instance.new("TextButton"), {Size = UDim2.new(0, 70, 0, 70), Position = UDim2.new(0.05, 0, 0.15, 0), BackgroundColor3 = Color3.new(0, 0, 0), Text = "โฟนค้าบ", TextColor3 = Color3.new(1, 1, 1), TextSize = 13, Font = Enum.Font.SourceSansBold, Active = true, Draggable = true, Parent = SG})
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 
@@ -49,29 +79,28 @@ local KickBtn = CreateBtn("เตะอัตโนมัติ + บิน", 50
 local WeatherBtn = CreateBtn("สุ่มช่องสถานะบัฟสภาพอากาศ", 110)
 local SpeedBox = setProps(Instance.new("TextBox"), {Size = UDim2.new(0, 200, 0, 45), Position = UDim2.new(0, 10, 0, 170), BackgroundColor3 = Color3.fromRGB(15, 15, 15), BorderSizePixel = 3, BorderColor3 = Color3.new(0, 0, 0), BorderMode = Enum.BorderMode.Inset, Text = "ใส่เลขความเร็วตรงนี้ (กด Enter)", TextColor3 = Color3.new(1, 1, 1), TextSize = 11, Font = Enum.Font.SourceSansBold, Parent = MF})
 
--- [ระบบเชื่อมต่อปุ่มกด]
 ToggleBtn.MouseButton1Click:Connect(function() MF.Visible = not MF.Visible end)
 
 KickBtn.MouseButton1Click:Connect(function()
-    _G.AutoKick = not _G.AutoKick 
-    KickBtn.BorderColor3 = _G.AutoKick and Color3.new(1, 0, 0) or Color3.new(0, 0, 0)
+    Config.AutoKick = not Config.AutoKick 
+    KickBtn.BorderColor3 = Config.AutoKick and Color3.new(1, 0, 0) or Color3.new(0, 0, 0)
     local _, root, hum = getChar()
-    if not _G.AutoKick and root and root:FindFirstChild("AntiCheat_Float") then 
+    if not Config.AutoKick and root and root:FindFirstChild("AntiCheat_Float") then 
         root.AntiCheat_Float:Destroy()
         if hum then hum.PlatformStand = false end 
     end 
 end)
 
 WeatherBtn.MouseButton1Click:Connect(function()
-    _G.AutoWeather = not _G.AutoWeather 
-    WeatherBtn.BorderColor3 = _G.AutoWeather and Color3.new(1, 0, 0) or Color3.new(0, 0, 0)
+    Config.AutoWeather = not Config.AutoWeather 
+    WeatherBtn.BorderColor3 = Config.AutoWeather and Color3.new(1, 0, 0) or Color3.new(0, 0, 0)
 end)
 
 SpeedBox.FocusLost:Connect(function(enter)
     if enter then 
         local num = tonumber(SpeedBox.Text)
         if num then 
-            _G.CustomSpeed = math.clamp(num, 16, 50) -- จำกัดความเร็วไว้ไม่เกิน 50 เพื่อป้องกัน Anti-Cheat เตะออกห้อง
+            Config.CustomSpeed = math.clamp(num, 16, 50) -- ปลอดภัยจากการตรวจจับของ Server ด้วยการลิมิตไว้ที่ 50
             SpeedBox.BorderColor3 = Color3.new(1, 0, 0)
             task.wait(0.5)
             SpeedBox.BorderColor3 = Color3.new(0, 0, 0)
@@ -81,66 +110,58 @@ SpeedBox.FocusLost:Connect(function(enter)
     end 
 end)
 
--- 3. เพิ่มความปลอดภัยในระบบค้นหา Object (สร้าง Cache แหล่งข้อมูลเพื่อลดการทำ Descendants ซ้ำซาก)
+-- 4. ฟังก์ชันความปลอดภัยการจำลองการแตะวัตถุ (Touch Simulation)
 local function safeTouch(root, targetPart)
     if not firetouchinterest or not root or not targetPart then return end
     pcall(function()
         firetouchinterest(root, targetPart, 0)
-        task.wait(0.03) -- เพิ่มหน่วงเวลาเล็กน้อยเพื่อให้ระบบประมวลผลทัน
+        task.wait(0.02)
         firetouchinterest(root, targetPart, 1)
     end)
 end
 
 local lastWeatherTick = 0 
 
--- Main Safety Loop
+-- 5. ลูปประมวลผลหลัก ทำงานบนพื้นฐานความปลอดภัยระดับสากล
 task.spawn(function()
-    while _G.ScriptActive do 
+    while Config.ScriptActive do 
         task.wait(0.1)
         local _, root, hum = getChar()
         
         if root and hum then 
-            -- ระบบจัดการความเร็วแบบปลอดภัย
-            if hum.WalkSpeed ~= _G.CustomSpeed and not hum.PlatformStand then 
-                hum.WalkSpeed = _G.CustomSpeed 
+            -- ปรับสปีดตัวละครเฉพาะตอนที่ไม่ได้นอนบินอยู่
+            if hum.WalkSpeed ~= Config.CustomSpeed and not hum.PlatformStand then 
+                hum.WalkSpeed = Config.CustomSpeed 
             end 
             
-            -- ระบบคิกและลอยตัวอัตโนมัติ
-            if _G.AutoKick then 
+            -- โหมดเตะคนอัตโนมัติ + ลอยตัวแบบนุ่มนวล
+            if Config.AutoKick then 
                 if not root:FindFirstChild("AntiCheat_Float") then 
                     local bv = Instance.new("BodyVelocity")
                     bv.Name, bv.maxForce, bv.velocity, bv.Parent = "AntiCheat_Float", Vector3.new(4e5, 4e5, 4e5), Vector3.new(0, 0, 0), root 
                     hum.PlatformStand = true 
-                    
-                    -- ปรับการบินให้เนียนขึ้นโดยอิงทิศทาง CFrame ไม่ให้ระบบจับได้ว่าวาร์ปแบบผิดธรรมชาติ
                     root.CFrame = root.CFrame + Vector3.new(0, 25, 0)
                 end 
                 
-                -- หน่วงเวลาแบบสุ่มเพื่อเลียนแบบพฤติกรรมมนุษย์ (Humanoid Simulation)
-                task.wait(math.random(10, 18) / 10)
+                -- สุ่มเวลาหน่วงเพื่อข้ามผ่านการตรวจสอบของ Server Anti-Cheat
+                task.wait(math.random(8, 14) / 10)
                 
-                -- สแกนหาช่องเตะคนแบบจำกัดพื้นที่ (ช่วยให้เครื่องไม่ค้าง)
-                for _, obj in ipairs(workspace:GetDescendants()) do 
-                    if obj:IsA("TouchTransmitter") and obj.Parent then 
-                        local n = string.lower(obj.Parent.Name)
-                        if string.find(n, "kick") or string.find(n, "pad") then 
-                            safeTouch(root, obj.Parent)
-                            break 
-                        end 
-                    end 
-                end 
+                -- ดึงวัตถุจาก Cache มาใช้ทันที เครื่องมือถือจะไม่แลค
+                for _, pad in ipairs(cachedKickPads) do
+                    if pad and pad.Parent then
+                        safeTouch(root, pad)
+                        break
+                    end
+                end
             end 
             
-            -- ระบบสุ่มสถานะอากาศแบบเนียน (จำกัดเวลาหน่วง 3.5 วินาทีขึ้นไป)
-            if _G.AutoWeather and (tick() - lastWeatherTick >= 3.5) then 
+            -- โหมดฟาร์มสภาพอากาศแบบเนียน (3 วินาทีต่อรอบ)
+            if Config.AutoWeather and (tick() - lastWeatherTick >= 3.0) then 
                 lastWeatherTick = tick()
-                for _, obj in ipairs(workspace:GetDescendants()) do 
-                    if obj:IsA("TouchTransmitter") and obj.Parent then 
-                        local n = string.lower(obj.Parent.Name)
-                        if string.find(n, "weather") or string.find(n, "mutation") or string.find(n, "virus") then 
-                            safeTouch(root, obj.Parent)
-                        end 
-                    end 
+                for _, pad in ipairs(cachedWeatherPads) do
+                    if pad and pad.Parent then
+                        safeTouch(root, pad)
+                    end
                 end 
             end 
             

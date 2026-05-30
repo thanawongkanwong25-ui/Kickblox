@@ -1,0 +1,131 @@
+local UIS = game:GetService("UserInputService")
+if not (UIS.TouchEnabled and not UIS.KeyboardEnabled and ((identifyexecutor and string.find(string.lower(identifyexecutor()), "delta")) or _G.Delta_Executed or firetouchinterest)) then
+    game:GetService("Players").LocalPlayer:Kick("❌ ใช้ได้เฉพาะบน Android ผ่าน Delta เท่านั้น!") return
+end
+
+_G.ScriptActive, _G.AutoKick, _G.AutoWeather, _G.CustomSpeed = true, false, false, 16
+local player = game:GetService("Players").LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- === สร้างระบบ UI ธีมสีดำอักษรขาว ===
+local SG = Instance.new("ScreenGui")
+SG.Name = "PhoneUI_Speed_" .. math.random(100, 999)
+pcall(function() SG.Parent = game:GetService("CoreGui") end) or pcall(function() SG.Parent = player:WaitForChild("PlayerGui") end)
+
+local ToggleMenuBtn = Instance.new("TextButton")
+ToggleMenuBtn.Size, ToggleMenuBtn.Position, ToggleMenuBtn.BackgroundColor3 = UDim2.new(0, 70, 0, 70), UDim2.new(0.05, 0, 0.15, 0), Color3.fromRGB(0, 0, 0)
+ToggleMenuBtn.Text, ToggleMenuBtn.TextColor3, ToggleMenuBtn.TextSize, ToggleMenuBtn.Font = "โฟนค้าบ", Color3.fromRGB(255, 255, 255), 13, Enum.Font.SourceSansBold
+ToggleMenuBtn.Active, ToggleMenuBtn.Draggable, ToggleMenuBtn.Parent = true, true, SG
+Instance.new("UICorner", ToggleMenuBtn).CornerRadius = UDim.new(1, 0)
+
+local MF = Instance.new("Frame")
+MF.Size, MF.Position, MF.BackgroundColor3, MF.BorderSizePixel = UDim2.new(0, 220, 0, 240), UDim2.new(0.2, 0, 0.3, 0), Color3.fromRGB(0, 0, 0), 2
+MF.Active, MF.Draggable, MF.Parent = true, true, SG
+
+local Title = Instance.new("TextLabel")
+Title.Size, Title.BackgroundColor3, Title.Text = UDim2.new(1, 0, 0, 35), Color3.fromRGB(15, 15, 15), " Delta X Menu v6 "
+Title.TextColor3, Title.TextSize, Title.Font, Title.Parent = Color3.fromRGB(255, 255, 255), 14, Enum.Font.SourceSansBold, MF
+
+local function CreateBtn(text, pos)
+    local btn = Instance.new("TextButton")
+    btn.Size, btn.Position, btn.BackgroundColor3 = UDim2.new(0, 200, 0, 45), UDim2.new(0, 10, 0, pos), Color3.fromRGB(15, 15, 15)
+    btn.BorderSizePixel, btn.BorderColor3, btn.BorderMode = 3, Color3.fromRGB(0, 0, 0), Enum.BorderMode.Inset
+    btn.Text, btn.TextColor3, btn.TextSize, btn.Font, btn.Parent = text, Color3.fromRGB(255, 255, 255), 13, Enum.Font.SourceSansBold, MF
+    return btn
+end
+
+local ToggleKickBtn = CreateBtn("เตะอัตโนมัติ + บิน", 50)
+local ToggleWeatherBtn = CreateBtn("สุ่มช่องสถานะบัฟสภาพอากาศ", 110)
+
+-- ช่องกรอกความเร็ว (TextBox Input)
+local SpeedBox = Instance.new("TextBox")
+SpeedBox.Size, SpeedBox.Position, SpeedBox.BackgroundColor3 = UDim2.new(0, 200, 0, 45), UDim2.new(0, 10, 0, 170), Color3.fromRGB(15, 15, 15)
+SpeedBox.BorderSizePixel, SpeedBox.BorderColor3, SpeedBox.BorderMode = 3, Color3.fromRGB(0, 0, 0), Enum.BorderMode.Inset
+SpeedBox.Text, SpeedBox.TextColor3, SpeedBox.TextSize, SpeedBox.Font, SpeedBox.Parent = "ใส่เลขความเร็วตรงนี้ (กด Enter)", Color3.fromRGB(255, 255, 255), 11, Enum.Font.SourceSansBold, MF
+
+-- === ระบบสั่งการปุ่มกด ===
+ToggleMenuBtn.MouseButton1Click:Connect(function() MF.Visible = not MF.Visible end)
+
+local function getChar()
+    local c = player.Character or player.CharacterAdded:Wait()
+    return c, c:WaitForChild("HumanoidRootPart", 5), c:WaitForChild("Humanoid", 5)
+end
+
+ToggleKickBtn.MouseButton1Click:Connect(function()
+    _G.AutoKick = not _G.AutoKick
+    ToggleKickBtn.BorderColor3 = _G.AutoKick and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 0, 0)
+    local _, root, hum = getChar()
+    if not _G.AutoKick and root and root:FindFirstChild("AntiCheat_Float") then
+        root.AntiCheat_Float:Destroy() if hum then hum.PlatformStand = false end
+    end
+end)
+
+ToggleWeatherBtn.MouseButton1Click:Connect(function()
+    _G.AutoWeather = not _G.AutoWeather
+    ToggleWeatherBtn.BorderColor3 = _G.AutoWeather and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 0, 0)
+end)
+
+-- ระบบดักจับการกรอกตัวเลขความเร็ว
+SpeedBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(SpeedBox.Text)
+        if num then
+            _G.CustomSpeed = num
+            SpeedBox.BorderColor3 = Color3.fromRGB(255, 0, 0) -- ขอบแดงเมื่อปรับค่าสำเร็จ
+            task.wait(0.5)
+            SpeedBox.BorderColor3 = Color3.fromRGB(0, 0, 0)   -- กลับเป็นขอบดำปกติ
+        else
+            SpeedBox.Text = "กรุณาใส่เฉพาะตัวเลข!"
+        end
+    end
+end)
+
+-- === รวมลูปการทำงานหลัก (แก้บั๊กตัวละครตายความเร็วรีเซ็ต) ===
+local lastWeatherTick = 0
+task.spawn(function()
+    while _G.ScriptActive do
+        task.wait(0.1)
+        local _, root, hum = getChar()
+        if root and hum then
+            -- ล็อกความเร็วตัวละครตามที่กรอก (Bypass รีเซ็ตความเร็วเวลาเกิดใหม่)
+            if hum.WalkSpeed ~= _G.CustomSpeed and not hum.PlatformStand then
+                hum.WalkSpeed = _G.CustomSpeed
+            end
+            
+            -- ระบบควบคุมการบินหลบสึนามิ
+            if _G.AutoKick then
+                if not root:FindFirstChild("AntiCheat_Float") then
+                    local bv = Instance.new("BodyVelocity")
+                    bv.Name, bv.maxForce, bv.velocity, bv.Parent = "AntiCheat_Float", Vector3.new(4e5, 4e5, 4e5), Vector3.new(0, 0, 0), root
+                    hum.PlatformStand = true
+                    root.CFrame = root.CFrame * CFrame.new(0, 30, 0)
+                end
+                
+                -- ลูปเตะอัตโนมัติ
+                task.wait(math.random(7, 13) / 10)
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("TouchTransmitter") and obj.Parent then
+                        local name = obj.Parent.Name:lower()
+                        if name:find("kick") or name:find("pad") then
+                            pcall(function() firetouchinterest(root, obj.Parent, 0) task.wait(0.02) firetouchinterest(root, obj.Parent, 1) end)
+                            break
+                        end
+                    end
+                end
+            end
+            
+            -- ลูปตู้สภาพอากาศ
+            if _G.AutoWeather and (tick() - lastWeatherTick >= 2.5) then
+                lastWeatherTick = tick()
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("TouchTransmitter") and obj.Parent then
+                        local name = obj.Parent.Name:lower()
+                        if name:find("weather") or name:find("mutation") or name:find("virus") then
+                            pcall(function() firetouchinterest(root, obj.Parent, 0) task.wait(0.02) firetouchinterest(root, obj.Parent, 1) end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)

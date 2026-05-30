@@ -1,16 +1,16 @@
 -- =================================================================
--- [OPTIMIZED & SECURE KICKBLOX SCRIPT FOR DELTA ANDROID]
+-- [FINAL STABLE & OPTIMIZED FOR DELTA ANDROID]
 -- =================================================================
 local UIS, players = game:GetService("UserInputService"), game:GetService("Players")
 local player, workspace = players.LocalPlayer, game:GetService("Workspace")
 
--- 1. อุปกรณ์และการรันเช็ค
+-- 1. ตรวจสอบอุปกรณ์และการรัน
 if not (UIS.TouchEnabled and not UIS.KeyboardEnabled and ((identifyexecutor and string.find(string.lower(identifyexecutor()), "delta")) or _G.Delta_Executed or firetouchinterest)) then 
     player:Kick("❌ สคริปต์นี้ปลอดภัยและเสถียรเฉพาะบน Android ผ่าน Delta เท่านั้น!")
     return 
 end 
 
--- 2. เปลี่ยนระบบสถานะมาใช้ Local Configuration ป้องกันการแทรกแซงข้อมูล
+-- 2. ระบบกำหนดสถานะ (Local Configuration)
 local Config = {
     ScriptActive = true,
     AutoKick = false,
@@ -122,7 +122,7 @@ end
 
 local lastWeatherTick = 0 
 
--- 5. ลูปประมวลผลหลัก ทำงานบนพื้นฐานความปลอดภัยระดับสากล
+-- 5. ลูปประมวลผลหลัก
 task.spawn(function()
     while Config.ScriptActive do 
         task.wait(0.1)
@@ -146,11 +146,10 @@ task.spawn(function()
                 -- สุ่มเวลาหน่วงเพื่อข้ามผ่านการตรวจสอบของ Server Anti-Cheat
                 task.wait(math.random(8, 14) / 10)
                 
-                -- ดึงวัตถุจาก Cache มาใช้ทันที เครื่องมือถือจะไม่แลค
+                -- [แก้ไขบั๊ก] ลบ break ออกเพื่อให้แตะพาร์ทคิกได้ครบทุกชิ้นในแมพ ไม่ค้างที่ชิ้นแรก
                 for _, pad in ipairs(cachedKickPads) do
                     if pad and pad.Parent then
                         safeTouch(root, pad)
-                        break
                     end
                 end
             end 
@@ -161,6 +160,7 @@ task.spawn(function()
                 for _, pad in ipairs(cachedWeatherPads) do
                     if pad and pad.Parent then
                         safeTouch(root, pad)
+                        task.wait(0.01) -- [แก้ไขบั๊ก] เพิ่มหน่วงเวลามิลลิวินาทีป้องกันสแปมแพ็กเก็ตเกินขีดจำกัด
                     end
                 end 
             end 
@@ -168,3 +168,4 @@ task.spawn(function()
         end 
     end 
 end)
+
